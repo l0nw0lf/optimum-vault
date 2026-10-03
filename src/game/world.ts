@@ -751,8 +751,8 @@ function buildApartment(scene: THREE.Scene, m: ReturnType<typeof mats>): THREE.P
   lantern.position.set(0.15, 2.15, 2.4);
   scene.add(lantern);
 
-  scene.fog = new THREE.FogExp2(0xfff4e6, 0.003);
-  scene.background = new THREE.Color(0xffedd4);
+  scene.fog = new THREE.FogExp2(0x070708, 0.003);
+  scene.background = new THREE.Color(0x070708);
 
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -805,15 +805,15 @@ function buildGate(scene: THREE.Scene, _m: ReturnType<typeof mats>): { doorL: TH
   const doorR = door(-1);
 
   scene.add(new THREE.AmbientLight(0x93a4b8, 0.12));
-  const key = new THREE.PointLight(0xd5e2f4, 18, 16, 2);
+  const key = new THREE.PointLight(0xd5e2f4, 2.2, 14, 2);
   key.position.set(0, 2.4, 2.4);
   scene.add(key);
   const rim = new THREE.DirectionalLight(0x8ea6c8, 0.35);
   rim.position.set(0, 6, 8);
   scene.add(rim);
 
-  scene.fog = new THREE.FogExp2(0x050506, 0.085);
-  scene.background = new THREE.Color(0x050506);
+  scene.fog = new THREE.FogExp2(0x070708, 0.085);
+  scene.background = new THREE.Color(0x070708);
   return { doorL, doorR };
 }
 

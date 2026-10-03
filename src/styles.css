@@ -18,9 +18,10 @@
   }
 
   html,
-  body {
+  body,
+  canvas {
     height: 100%;
-    background: var(--color-bg);
+    background-color: #070708;
     color: var(--color-ink);
     font-family: var(--font-sans);
   }

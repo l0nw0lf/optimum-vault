@@ -5,7 +5,6 @@ import type { EngineHandle } from "@/game/engine";
 import { SIGNALS, signalName } from "@/game/layout";
 import { pickQuestions, shuffle } from "@/game/questions";
 import { scoreVibe } from "@/game/score";
-import { makeSigil } from "@/game/sigil";
 import { VIBE_COPY, type AnswerRec, type Question, type VibeId } from "@/game/types";
 import { forgePortrait } from "@/lib/pfp.functions";
 
@@ -58,12 +57,8 @@ export function VaultApp() {
     if (!canvas) return;
     let dead = false;
     let handle: EngineHandle | null = null;
-    const questions = pickQuestions();
-    const ids = shuffle(SIGNALS.map((signal) => signal.id));
-    roundRef.current = new Map(ids.map((id, index) => [id, questions[index]!]));
-    answersRef.current = [];
-    answeredIds.current = new Set();
     setBootError(null);
+    dealRound();
 
     void import("@/game/engine")
       .then((mod) => {
@@ -256,13 +251,13 @@ export function VaultApp() {
         setPortrait(result.image);
         setForgeError(null);
       } else {
+        setPortrait(null);
         setForgeError(result.error);
-        setPortrait(makeSigil(vibe, seedRef.current));
       }
     } catch {
       if (lifeRef.current !== stamp) return;
+      setPortrait(null);
       setForgeError("The forge could not be reached.");
-      setPortrait(makeSigil(vibe, seedRef.current));
     } finally {
       if (lifeRef.current !== stamp) return;
       setForging(false);
@@ -299,6 +294,14 @@ export function VaultApp() {
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
+  function dealRound() {
+    const questions = pickQuestions();
+    const ids = shuffle(SIGNALS.map((signal) => signal.id));
+    roundRef.current = new Map(ids.map((id, index) => [id, questions[index]!]));
+    answersRef.current = [];
+    answeredIds.current = new Set();
+  }
+
   function again() {
     lifeRef.current += 1;
     pendingEnter.current = false;
@@ -314,6 +317,12 @@ export function VaultApp() {
     setActive(null);
     setClosing(false);
     seedRef.current = 0;
+    dealRound();
+    if (engineRef.current) {
+      engineRef.current.reset();
+      setReady(true);
+      return;
+    }
     setRun((value) => value + 1);
   }
 
@@ -332,7 +341,7 @@ export function VaultApp() {
   const showHud = phase === "explore" && !active;
 
   return (
-    <main className="relative h-dvh w-full overflow-hidden bg-bg text-ink">
+    <main className="relative h-dvh w-full overflow-hidden bg-[#070708] text-ink">
       <canvas
         ref={canvasRef}
         className={
@@ -504,35 +513,31 @@ export function VaultApp() {
         </section>
       ) : null}
 
-      {phase === "portrait" && vibeCopy && portrait ? (
-        <section className="absolute inset-0 z-40 flex flex-col items-center justify-center overflow-y-auto bg-bg px-5 py-8 text-center">
+      {phase === "portrait" && vibeCopy ? (
+        <section className="absolute inset-0 z-40 flex flex-col items-center justify-center overflow-y-auto bg-[#070708] px-5 py-8 text-center">
           <p className="text-xs tracking-brand text-glow">{vibeCopy.name}</p>
-          <img
-            src={portrait}
-            alt={`${vibeCopy.name} portrait`}
-            className="mt-5 aspect-square w-11/12 max-w-lg border border-glow/40 object-cover"
-          />
-          <p className="mt-4 text-xs tracking-brand text-ash">ONE OF ONE</p>
-          {forgeError ? <p className="mt-3 max-w-sm text-sm text-ash">{forgeError}</p> : null}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={download}
-              className="vault-btn"
-            >
-              <Download className="size-4" />
-              Download
-            </button>
-            <button
-              type="button"
-              onClick={() => void share()}
-              className="vault-btn"
-            >
-              <Share2 className="size-4" />
-              Share
-            </button>
-          </div>
-          {forgeError ? (
+          {portrait ? (
+            <img
+              src={portrait}
+              alt={`${vibeCopy.name} portrait`}
+              className="mt-5 w-[min(88vw,34rem)] border border-glow/40 object-cover"
+            />
+          ) : null}
+          {portrait ? <p className="mt-4 text-xs tracking-brand text-ash">ONE OF ONE</p> : null}
+          {forgeError && !portrait ? <p className="mt-6 max-w-sm text-sm text-ash">{forgeError}</p> : null}
+          {portrait ? (
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button type="button" onClick={download} className="vault-btn">
+                <Download className="size-4" />
+                Download
+              </button>
+              <button type="button" onClick={() => void share()} className="vault-btn">
+                <Share2 className="size-4" />
+                Share
+              </button>
+            </div>
+          ) : null}
+          {forgeError && !portrait ? (
             <button type="button" onClick={() => void forgeNow()} className="vault-btn vault-btn-ghost mt-4">
               Try the forge again
             </button>

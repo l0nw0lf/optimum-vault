@@ -60,24 +60,16 @@ const POOLS: Record<
   },
 };
 
-export function buildPortraitPrompt(vibe: VibeId, seed: number): { prompt: string; base: 0 | 1 } {
+export function buildPortraitPrompt(vibe: VibeId, seed: number): string {
   const rand = mulberry32(seed || 1);
   const pool = POOLS[vibe];
-  const base: 0 | 1 = rand() < 0.5 ? 0 : 1;
-  const glyph = (seed >>> 0).toString(16).padStart(8, "0");
-  const prompt = [
-    "Edit the reference into a square portrait of this exact character.",
-    "Identity lock: keep the cream flame-shaped head, the same peaks and gaps, the cream skin, the short neck, the body proportions, and the black leather mask identical to the reference. Do not redesign the face, mask, or flame silhouette. If the reference is a close crop, extend the same cream body. Do not swap mask styles between references.",
-    `Outfit: ${pick(rand, pool.outfit)}.`,
-    `Color accents: ${pick(rand, pool.accent)}.`,
-    `Pose: ${pick(rand, pool.pose)}.`,
-    `Expression, still using the same mask: ${pick(rand, pool.expression)}.`,
-    `Background: ${pick(rand, pool.background)}.`,
-    `Accessory on the outfit only: ${pick(rand, pool.accessory)}.`,
-    "Disney-Pixar 3D animated style, soft studio light, one character only, centered, square portrait.",
-    `Styling: ${pick(rand, ["warm key light", "cool rim light", "soft window light", "neon edge light"])}.`,
-    "No text, no letters, no watermark, no logo, no extra people.",
-    `Unique sitting ${glyph}.`,
-  ].join(" ");
-  return { prompt, base };
+  return [
+    "Cream flame-headed character wearing a black leather mask",
+    `outfit ${pick(rand, pool.outfit)}`,
+    pick(rand, pool.accent),
+    `expression ${pick(rand, pool.expression)}`,
+    `background ${pick(rand, pool.background)}`,
+    pick(rand, pool.pose),
+    "portrait, upper body only, torso and face visible, close crop, suitable for profile picture, highly detailed, digital art style.",
+  ].join(", ");
 }

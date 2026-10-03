@@ -1,59 +1,35 @@
 import { createServerFn } from "@tanstack/react-start";
-import bodyRef from "@/game/bases/body.jpg?inline";
-import faceRef from "@/game/bases/face.jpg?inline";
 import { buildPortraitPrompt } from "@/game/prompt";
 import type { VibeId } from "@/game/types";
 
 const VIBES: VibeId[] = ["flexnode", "validator", "propagator", "architect"];
-
 const cache = new Map<string, string>();
-const calls: number[] = [];
 
-type ImagePayload = {
-  data?: { b64_json?: string; url?: string; mime_type?: string }[];
-};
-
-function asDataUrl(raw: string, mime: string): string {
-  if (raw.startsWith("data:")) return raw;
-  return `data:${mime};base64,${raw}`;
-}
-
-function allowCall(): boolean {
-  const now = Date.now();
-  while (calls.length > 0 && now - (calls[0] ?? 0) > 10 * 60 * 1000) calls.shift();
-  if (calls.length >= 8) return false;
-  calls.push(now);
-  return true;
-}
-
-async function requestEdit(apiKey: string, prompt: string, image: string): Promise<Response> {
-  return fetch("https://api.x.ai/v1/images/edits", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "grok-imagine-image-2.0",
-      prompt,
-      image: { url: image, type: "image_url" },
-      response_format: "b64_json",
-    }),
-    signal: AbortSignal.timeout(55_000),
+function portraitUrl(prompt: string, seed: number): string {
+  const params = new URLSearchParams({
+    width: "1024",
+    height: "1024",
+    seed: String(seed),
+    nologo: "true",
+    model: "turbo",
   });
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
 }
 
-async function imageFromResponse(res: Response): Promise<string | null> {
-  if (!res.ok) return null;
-  const payload = (await res.json()) as ImagePayload;
-  const item = payload.data?.[0];
-  if (!item) return null;
-  if (item.b64_json) return asDataUrl(item.b64_json, item.mime_type || "image/jpeg");
-  if (!item.url) return null;
-  const img = await fetch(item.url, { signal: AbortSignal.timeout(20_000) });
-  if (!img.ok) return null;
-  const mime = img.headers.get("content-type")?.split(";")[0] || "image/png";
-  const bytes = Buffer.from(await img.arrayBuffer());
+function timedOut(error: unknown): boolean {
+  return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+}
+
+async function fetchPortrait(url: string): Promise<string> {
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(15_000),
+    headers: { Accept: "image/*" },
+  });
+  if (!res.ok) throw new Error(`Forge status ${res.status}`);
+  const mime = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+  if (!mime.startsWith("image/")) throw new Error("Forge did not return an image");
+  const bytes = Buffer.from(await res.arrayBuffer());
+  if (bytes.length < 800) throw new Error("Forge image was empty");
   return `data:${mime};base64,${bytes.toString("base64")}`;
 }
 
@@ -71,21 +47,15 @@ export const forgePortrait = createServerFn({ method: "POST" })
     const cached = cache.get(key);
     if (cached) return { ok: true as const, image: cached };
 
-    const apiKey = process.env.XAI_API_KEY;
-    if (!apiKey) return { ok: false as const, error: "The forge is offline in this environment." };
-    if (!allowCall()) {
-      return { ok: false as const, error: "The forge is cooling down. Try again in a few minutes." };
-    }
-
-    const { prompt, base } = buildPortraitPrompt(data.vibe, data.seed);
-    const reference = base === 0 ? bodyRef : faceRef;
+    const prompt = buildPortraitPrompt(data.vibe, data.seed);
     try {
-      const res = await requestEdit(apiKey, prompt, reference);
-      const image = await imageFromResponse(res);
-      if (!image) return { ok: false as const, error: "The forge returned nothing this pass." };
+      const image = await fetchPortrait(portraitUrl(prompt, data.seed));
       cache.set(key, image);
       return { ok: true as const, image };
-    } catch {
+    } catch (error) {
+      if (timedOut(error)) {
+        return { ok: false as const, error: "The forge returned nothing this pass." };
+      }
       return { ok: false as const, error: "The forge could not be reached." };
     }
   });

@@ -21,6 +21,7 @@ export type EngineHandle = {
   getMetrics: () => Metrics;
   tryInteract: () => boolean;
   finishOpening: () => void;
+  reset: () => void;
 };
 
 const LOOK_SENS = 0.00215;
@@ -60,11 +61,20 @@ function signalFrom(obj: THREE.Object3D | null): string | null {
 
 function hardenWebGLPrecision() {
   const fallback = { rangeMin: 127, rangeMax: 127, precision: 23 };
-  const patch = (proto: { getShaderPrecisionFormat: WebGLRenderingContext["getShaderPrecisionFormat"] } | undefined) => {
+  const patch = (proto: WebGLRenderingContext | undefined) => {
     if (!proto || "__vaultPrecision" in proto) return;
-    const original = proto.getShaderPrecisionFormat;
+    const originalPrecision = proto.getShaderPrecisionFormat;
     proto.getShaderPrecisionFormat = function (shaderType, precisionType) {
-      return original.call(this, shaderType, precisionType) ?? fallback;
+      return originalPrecision.call(this, shaderType, precisionType) ?? fallback;
+    };
+    const originalParameter = proto.getParameter;
+    proto.getParameter = function (pname: GLenum) {
+      const value = originalParameter.call(this, pname);
+      if (value != null) return value;
+      if (pname === this.VERSION) return "WebGL 1.0";
+      if (pname === this.SCISSOR_BOX || pname === this.VIEWPORT) return new Int32Array([0, 0, 300, 150]);
+      if (pname === this.MAX_COMBINED_TEXTURE_IMAGE_UNITS) return 8;
+      return value;
     };
     Object.defineProperty(proto, "__vaultPrecision", { value: true });
   };
@@ -134,6 +144,10 @@ export function mountEngine(canvas: HTMLCanvasElement, hooks: EngineHooks): Engi
   let master: GainNode | null = null;
 
   const world = buildWorld();
+  const signalBase = world.signals.map((signal) => ({
+    glows: signal.glows.map((mat) => mat.emissiveIntensity),
+    light: signal.light.intensity,
+  }));
   const camera = new THREE.PerspectiveCamera(68, 1, 0.08, 80);
   camera.rotation.order = "YXZ";
   const renderer = makeRenderer(canvas);
@@ -538,7 +552,6 @@ export function mountEngine(canvas: HTMLCanvasElement, hooks: EngineHooks): Engi
       if (document.pointerLockElement === canvas) document.exitPointerLock();
       audioCtx?.close().catch(() => undefined);
       renderer.dispose();
-      renderer.forceContextLoss();
       if (window.__controlsTest) delete window.__controlsTest;
     },
     setLocked: (next) => {
@@ -608,6 +621,43 @@ export function mountEngine(canvas: HTMLCanvasElement, hooks: EngineHooks): Engi
     },
     finishOpening: () => {
       completeOpening();
+    },
+    reset: () => {
+      phase = "gate";
+      locked = false;
+      pos.set(SPAWN.x, EYE, SPAWN.z);
+      yaw = 0;
+      pitch = 0;
+      vel.x = 0;
+      vel.z = 0;
+      bob = 0;
+      openingT = 0;
+      openingDone = null;
+      exploreSeconds = 0;
+      movingTime = 0;
+      pathLength = 0;
+      optimal = 0;
+      checkpoints.length = 0;
+      checkpoints.push({ x: SPAWN.x, z: SPAWN.z });
+      visitedSignals.clear();
+      zones.clear();
+      answered.clear();
+      keys.clear();
+      injected.clear();
+      stickX = 0;
+      stickY = 0;
+      focusId = null;
+      ePrev = false;
+      world.doorL.rotation.y = 0;
+      world.doorR.rotation.y = 0;
+      world.signals.forEach((signal, index) => {
+        const base = signalBase[index];
+        signal.glows.forEach((mat, glowIndex) => {
+          mat.emissiveIntensity = base?.glows[glowIndex] ?? mat.emissiveIntensity;
+        });
+        if (base) signal.light.intensity = base.light;
+      });
+      hooks.onFocus(null);
     },
   };
 }
