@@ -22,6 +22,21 @@ export const BLOCKS: Rect[] = [
   { minX: -3.05, maxX: -1.1, minZ: -1.4, maxZ: -0.1 },
   { minX: 7.35, maxX: 11.55, minZ: -15.15, maxZ: -13.5 },
   { minX: 14.65, maxX: 16.1, minZ: -22.5, maxZ: -17.4 },
+  { minX: -7.42, maxX: -6.85, minZ: -11.15, maxZ: -9.45 },
+  { minX: -6.85, maxX: -3.55, minZ: -11.48, maxZ: -10.55 },
+  { minX: 6.2, maxX: 7.42, minZ: 0.75, maxZ: 1.7 },
+  { minX: 6.25, maxX: 7.42, minZ: -6.9, maxZ: -6.05 },
+  { minX: -3.95, maxX: -3.2, minZ: -22.4, maxZ: -20.55 },
+  { minX: 8.95, maxX: 9.8, minZ: -16.25, maxZ: -15.45 },
+  { minX: 1.2, maxX: 3.95, minZ: -7.95, maxZ: -6.45 },
+  { minX: 1.7, maxX: 3.4, minZ: -6.7, maxZ: -5.5 },
+  { minX: -5.45, maxX: -3.9, minZ: -5.75, maxZ: -4.2 },
+  { minX: 3.05, maxX: 4.3, minZ: -9.15, maxZ: -7.6 },
+  { minX: 6.7, maxX: 7.42, minZ: -5.35, maxZ: -2.65 },
+  { minX: -3.4, maxX: -1.5, minZ: -16.15, maxZ: -14.95 },
+  { minX: 1.6, maxX: 3.15, minZ: -21.95, maxZ: -20.4 },
+  { minX: 6.1, maxX: 7.65, minZ: -21.3, maxZ: -19.65 },
+  { minX: 11.5, maxX: 12.85, minZ: -17.25, maxZ: -15.8 },
 ];
 
 export const SPAWN = { x: 0.15, z: 2.4 };

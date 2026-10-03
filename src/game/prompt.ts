@@ -15,42 +15,6 @@ function pick<T>(rand: () => number, list: readonly T[]): T {
   return list[Math.floor(rand() * list.length)] as T;
 }
 
-const FACE = [
-  "an adult woman around thirty",
-  "an adult man around thirty",
-  "an androgynous adult around thirty",
-  "an adult around thirty-five with striking bone structure",
-  "an adult around thirty with a calm oval face",
-] as const;
-
-const SKIN = [
-  "deep brown skin",
-  "warm olive skin",
-  "fair cool-toned skin",
-  "golden tan skin",
-  "rich ebony skin",
-  "light brown skin",
-] as const;
-
-const HAIR = [
-  "a sharp black undercut",
-  "slicked charcoal hair",
-  "loose dark waves tucked behind one ear",
-  "a shaved side with longer top",
-  "close-cropped natural hair",
-  "a low knot of black hair",
-  "silver-threaded dark hair swept back",
-  "shoulder-length straight black hair",
-] as const;
-
-const DETAIL = [
-  "a thin metallic ear cuff",
-  "no jewelry",
-  "a single small stud",
-  "a narrow collar chain barely visible",
-  "a faint scar through one eyebrow",
-] as const;
-
 const POOLS: Record<
   VibeId,
   {
@@ -59,165 +23,61 @@ const POOLS: Record<
     pose: string[];
     expression: string[];
     background: string[];
+    accessory: string[];
   }
 > = {
   flexnode: {
-    outfit: [
-      "cropped technical streetwear jacket over a black ribbed knit",
-      "asymmetric nylon windbreaker in matte black",
-      "layered charcoal hoodie with structured shoulders",
-      "sleeveless tactical vest over a dark ribbed top",
-      "oversized charcoal bomber with a high collar",
-    ],
-    accent: [
-      "electric blue edge light along the jacket",
-      "cobalt filament lines in the seams",
-      "icy cyan rim light",
-      "ultramarine specular highlights",
-    ],
-    pose: [
-      "a mid-turn dynamic lean, weight on the back foot",
-      "one shoulder pushed forward as if already moving",
-      "chin slightly lifted, caught mid-motion",
-      "a ready stance, torso angled off-axis",
-    ],
-    expression: [
-      "a confident half-smirk",
-      "a sharp knowing grin",
-      "a cool unbothered stare",
-      "a quiet dare in the eyes",
-    ],
-    background: [
-      "a rain-slick urban night thrown far out of focus",
-      "blurred city bokeh at blue hour",
-      "a dark rooftop with distant cold lights",
-      "a neon-reflected alley reduced to soft streaks",
-      "a dim transit platform behind them",
-    ],
+    outfit: ["a streetwear jacket", "a hoodie", "a tracksuit"],
+    accent: ["electric blue accents", "neon green accents", "cyan accents"],
+    pose: ["a dynamic leaning pose", "an action pose"],
+    expression: ["a confident smirk", "an intense stare"],
+    background: ["an urban rooftop", "a city night skyline", "a neon-lit street"],
+    accessory: ["a thin chain", "a snapback worn backward", "sport gloves", "no extra accessory"],
   },
   validator: {
-    outfit: [
-      "a formal tactical coat, tailored and closed",
-      "a black high-collar uniform jacket with precise seams",
-      "a structured charcoal suit shell with a hidden placket",
-      "a minimal armored dress shirt in matte black",
-      "a silver-buttoned tactical overcoat",
-    ],
-    accent: [
-      "silver and white edge accents",
-      "cool white piping at the collar",
-      "brushed-metal highlights",
-      "pale ash rim light",
-    ],
-    pose: [
-      "a calm composed stance, shoulders level",
-      "hands relaxed at the sides, perfectly still",
-      "a measured three-quarter stance",
-      "upright and unhurried, weight evenly set",
-    ],
-    expression: [
-      "a neutral focused expression",
-      "a steady unreadable gaze",
-      "quiet concentration, mouth relaxed",
-      "an attentive, almost clinical calm",
-    ],
-    background: [
-      "a clean minimal studio, charcoal seamless backdrop",
-      "a dark soundstage with a single soft key light",
-      "an empty ash-grey cyclorama",
-      "a dim gallery wall, featureless and precise",
-    ],
+    outfit: ["a tactical vest", "a formal jacket", "a structured coat"],
+    accent: ["silver accents", "white accents", "icy blue accents"],
+    pose: ["a calm upright pose", "an arms-folded pose"],
+    expression: ["a neutral focused expression", "a sharp analytical expression"],
+    background: ["a clean minimal studio", "a data grid", "a white void"],
+    accessory: ["a slim earpiece", "a metal lapel pin", "no extra accessory"],
   },
   propagator: {
-    outfit: [
-      "explorer utility gear with strapped pockets",
-      "a field jacket in matte black with webbing",
-      "a lightweight traversal shell and dark base layer",
-      "a hooded utility coat, half unzipped",
-      "modular dark outdoor kit, worn in but clean",
-    ],
-    accent: [
-      "teal edge lighting",
-      "green-cyan filament along the straps",
-      "sea-glass rim light",
-      "muted emerald speculars",
-    ],
-    pose: [
-      "a mid-stride walking pose, one foot still lifting",
-      "turning as if following a signal down a corridor",
-      "weight shifting forward, coat slightly in motion",
-      "a pause mid-step, head angled toward something off-frame",
-    ],
-    expression: [
-      "a curious open expression",
-      "eyes narrowed with interest, not suspicion",
-      "a faint questioning look",
-      "alert, as if listening to a distant network",
-    ],
-    background: [
-      "an expansive dark network-grid receding into haze",
-      "faint orthogonal light lines like a city schematic",
-      "a deep space of teal nodes and thin connections",
-      "a blurred corridor of repeating luminous gridlines",
-    ],
+    outfit: ["an explorer jacket", "a utility vest", "a cargo outfit"],
+    accent: ["teal accents", "forest green accents", "amber accents"],
+    pose: ["a mid-stride pose", "a looking-around pose"],
+    expression: ["a curious expression", "a wide-eyed expression"],
+    background: ["an expansive network grid", "open terrain", "a galaxy"],
+    accessory: ["a field strap", "a small satchel", "binoculars at the chest", "no extra accessory"],
   },
   architect: {
-    outfit: [
-      "a sleek structured black coat with architectural shoulders",
-      "a sharp tailored charcoal shell, almost geometric",
-      "a column of matte black tailoring, no excess",
-      "a high-collar constructed jacket with hard seams",
-      "a precise dark uniform, cut like a building elevation",
-    ],
-    accent: [
-      "gold and amber edge light",
-      "warm brass highlights on the collar",
-      "a thin amber rim along one shoulder",
-      "low gold speculars, never bright yellow",
-    ],
-    pose: [
-      "arms crossed, authoritative and still",
-      "one arm folded, the other relaxed, chin level",
-      "a squared stance like a facade",
-      "hands clasped low, shoulders exact",
-    ],
-    expression: [
-      "a sharp focused expression",
-      "a composed, exacting gaze",
-      "slightly narrowed eyes, nothing wasted",
-      "a cool appraisal, mouth straight",
-    ],
-    background: [
-      "a geometric architectural interior in charcoal and shadow",
-      "hard planes of a dark atrium behind them",
-      "repeating beams and a single warm slit of light",
-      "a monumental concrete grid, softly out of focus",
-    ],
+    outfit: ["a sleek turtleneck", "a structured blazer", "a designer fit"],
+    accent: ["gold accents", "amber accents", "deep violet accents"],
+    pose: ["an arms-crossed pose", "a chin-resting-on-hand pose"],
+    expression: ["a sharp composed expression", "an authoritative expression"],
+    background: ["geometric architecture", "a blueprint grid", "dark marble"],
+    accessory: ["a slim ring", "architectural glasses pushed up", "no extra accessory"],
   },
 };
 
-export function buildPortraitPrompt(vibe: VibeId, seed: number): string {
+export function buildPortraitPrompt(vibe: VibeId, seed: number): { prompt: string; base: 0 | 1 } {
   const rand = mulberry32(seed || 1);
   const pool = POOLS[vibe];
-  const person = [
-    pick(rand, FACE),
-    pick(rand, SKIN),
-    pick(rand, HAIR),
-    pick(rand, DETAIL),
-  ].join(", ");
+  const base: 0 | 1 = rand() < 0.5 ? 0 : 1;
   const glyph = (seed >>> 0).toString(16).padStart(8, "0");
-
-  return [
-    "Tight head-and-shoulders portrait photograph, square, one person only, centered, eyes in the upper third.",
-    `Subject: ${person}. Adult, fictional, not a celebrity, not a minor, not a public figure.`,
+  const prompt = [
+    "Edit the reference into a square portrait of this exact character.",
+    "Identity lock: keep the cream flame-shaped head, the same peaks and gaps, the cream skin, the short neck, the body proportions, and the black leather mask identical to the reference. Do not redesign the face, mask, or flame silhouette. If the reference is a close crop, extend the same cream body. Do not swap mask styles between references.",
     `Outfit: ${pick(rand, pool.outfit)}.`,
-    `Accent: ${pick(rand, pool.accent)}, kept subtle against black and charcoal.`,
+    `Color accents: ${pick(rand, pool.accent)}.`,
     `Pose: ${pick(rand, pool.pose)}.`,
-    `Expression: ${pick(rand, pool.expression)}.`,
+    `Expression, still using the same mask: ${pick(rand, pool.expression)}.`,
     `Background: ${pick(rand, pool.background)}.`,
-    "Shot on an 85mm lens, shallow depth of field, cinematic grade, fine grain, premium, photoreal.",
-    "Palette is black, charcoal, and ash, with only the accent color as a controlled highlight.",
-    "No text, no letters, no watermark, no logo, no border, no collage, no extra people, no extra limbs.",
+    `Accessory on the outfit only: ${pick(rand, pool.accessory)}.`,
+    "Disney-Pixar 3D animated style, soft studio light, one character only, centered, square portrait.",
+    `Styling: ${pick(rand, ["warm key light", "cool rim light", "soft window light", "neon edge light"])}.`,
+    "No text, no letters, no watermark, no logo, no extra people.",
     `Unique sitting ${glyph}.`,
   ].join(" ");
+  return { prompt, base };
 }

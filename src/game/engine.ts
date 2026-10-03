@@ -58,6 +58,38 @@ function signalFrom(obj: THREE.Object3D | null): string | null {
   return null;
 }
 
+function hardenWebGLPrecision() {
+  const fallback = { rangeMin: 127, rangeMax: 127, precision: 23 };
+  const patch = (proto: { getShaderPrecisionFormat: WebGLRenderingContext["getShaderPrecisionFormat"] } | undefined) => {
+    if (!proto || "__vaultPrecision" in proto) return;
+    const original = proto.getShaderPrecisionFormat;
+    proto.getShaderPrecisionFormat = function (shaderType, precisionType) {
+      return original.call(this, shaderType, precisionType) ?? fallback;
+    };
+    Object.defineProperty(proto, "__vaultPrecision", { value: true });
+  };
+  patch(globalThis.WebGLRenderingContext?.prototype);
+  patch(globalThis.WebGL2RenderingContext?.prototype);
+}
+
+function makeRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
+  hardenWebGLPrecision();
+  const narrow = Math.min(window.innerWidth, window.innerHeight) < 760;
+  const attempts = [
+    { antialias: !narrow, alpha: false, powerPreference: narrow ? "default" : "high-performance" } as const,
+    { antialias: false, alpha: false, powerPreference: "default" } as const,
+  ];
+  let last: unknown;
+  for (const attrs of attempts) {
+    try {
+      return new THREE.WebGLRenderer({ canvas, ...attrs });
+    } catch (error) {
+      last = error;
+    }
+  }
+  throw last instanceof Error ? last : new Error("This device could not open the vault.");
+}
+
 export function mountEngine(canvas: HTMLCanvasElement, hooks: EngineHooks): EngineHandle {
   let disposed = false;
   let phase: "gate" | "opening" | "explore" | "finale" = "gate";
@@ -104,12 +136,7 @@ export function mountEngine(canvas: HTMLCanvasElement, hooks: EngineHooks): Engi
   const world = buildWorld();
   const camera = new THREE.PerspectiveCamera(68, 1, 0.08, 80);
   camera.rotation.order = "YXZ";
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: false,
-    powerPreference: "high-performance",
-  });
+  const renderer = makeRenderer(canvas);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.24;

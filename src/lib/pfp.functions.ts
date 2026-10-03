@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import bodyRef from "@/game/bases/body.jpg?inline";
+import faceRef from "@/game/bases/face.jpg?inline";
 import { buildPortraitPrompt } from "@/game/prompt";
 import type { VibeId } from "@/game/types";
 
@@ -24,29 +26,19 @@ function allowCall(): boolean {
   return true;
 }
 
-async function requestImage(
-  apiKey: string,
-  model: string,
-  prompt: string,
-  rich: boolean,
-): Promise<Response> {
-  const body: Record<string, unknown> = {
-    model,
-    prompt,
-    n: 1,
-    response_format: "b64_json",
-  };
-  if (rich) {
-    body.aspect_ratio = "1:1";
-    body.resolution = "1k";
-  }
-  return fetch("https://api.x.ai/v1/images/generations", {
+async function requestEdit(apiKey: string, prompt: string, image: string): Promise<Response> {
+  return fetch("https://api.x.ai/v1/images/edits", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      model: "grok-imagine-image-2.0",
+      prompt,
+      image: { url: image, type: "image_url" },
+      response_format: "b64_json",
+    }),
     signal: AbortSignal.timeout(55_000),
   });
 }
@@ -85,12 +77,10 @@ export const forgePortrait = createServerFn({ method: "POST" })
       return { ok: false as const, error: "The forge is cooling down. Try again in a few minutes." };
     }
 
-    const prompt = buildPortraitPrompt(data.vibe, data.seed);
+    const { prompt, base } = buildPortraitPrompt(data.vibe, data.seed);
+    const reference = base === 0 ? bodyRef : faceRef;
     try {
-      let res = await requestImage(apiKey, "grok-imagine-image-2.0", prompt, true);
-      if (!res.ok) {
-        res = await requestImage(apiKey, "grok-imagine-image", prompt, false);
-      }
+      const res = await requestEdit(apiKey, prompt, reference);
       const image = await imageFromResponse(res);
       if (!image) return { ok: false as const, error: "The forge returned nothing this pass." };
       cache.set(key, image);

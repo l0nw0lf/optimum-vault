@@ -9,7 +9,7 @@ import { makeSigil } from "@/game/sigil";
 import { VIBE_COPY, type AnswerRec, type Question, type VibeId } from "@/game/types";
 import { forgePortrait } from "@/lib/pfp.functions";
 
-type Phase = "intro" | "opening" | "explore" | "reveal" | "forging" | "portrait";
+type Phase = "intro" | "opening" | "explore" | "reveal" | "forging" | "portrait" | "glitch";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 
@@ -209,6 +209,14 @@ export function VaultApp() {
       setActive(null);
       setClosing(false);
       if (count >= 5) {
+        const correct = answersRef.current.filter((answer) => answer.correct).length;
+        engineRef.current?.enterFinale();
+        if (correct < 3) {
+          setVibe(null);
+          setPortrait(null);
+          setPhase("glitch");
+          return;
+        }
         const metrics = engineRef.current?.getMetrics();
         const next = scoreVibe(
           metrics ?? {
@@ -222,7 +230,6 @@ export function VaultApp() {
           },
           answersRef.current,
         );
-        engineRef.current?.enterFinale();
         setVibe(next);
         setPhase("reveal");
       } else {
@@ -233,6 +240,10 @@ export function VaultApp() {
 
   async function forgeNow() {
     if (!vibe || forging) return;
+    if (answersRef.current.filter((answer) => answer.correct).length < 3) {
+      setPhase("glitch");
+      return;
+    }
     const stamp = lifeRef.current;
     if (!seedRef.current) seedRef.current = Math.floor(Math.random() * 1_000_000_000);
     setForging(true);
@@ -326,7 +337,8 @@ export function VaultApp() {
         ref={canvasRef}
         className={
           "absolute inset-0 z-0 h-full w-full touch-none " +
-          (phase === "explore" && !active ? "" : "pointer-events-none")
+          (phase === "explore" && !active ? "" : "pointer-events-none") +
+          (phase === "glitch" ? " glitch-canvas" : "")
         }
       />
       <div className="vignette pointer-events-none absolute inset-0" />
@@ -354,7 +366,7 @@ export function VaultApp() {
                 event.stopPropagation();
                 again();
               }}
-              className="mt-8 min-h-14 min-w-44 border border-glow bg-ink px-10 text-sm font-semibold tracking-brand text-bg"
+              className="vault-btn mt-8"
             >
               Try again
             </button>
@@ -367,7 +379,7 @@ export function VaultApp() {
                 event.stopPropagation();
                 enter();
               }}
-              className="mt-10 min-h-14 min-w-44 border border-glow bg-ink px-10 text-sm font-semibold tracking-brand text-bg transition-transform hover:scale-[1.03]"
+              className="vault-btn mt-10"
             >
               {waiting && !ready ? "Opening" : "Enter"}
             </button>
@@ -398,7 +410,7 @@ export function VaultApp() {
           <button
             type="button"
             onClick={pressEnter}
-            className="absolute bottom-8 left-1/2 z-20 min-h-12 max-w-[90vw] -translate-x-1/2 border border-glow bg-ink px-5 text-sm font-semibold text-bg"
+            className="vault-btn absolute bottom-8 left-1/2 z-20 max-w-[90vw] -translate-x-1/2"
           >
             {nudge && !focus ? "Get closer" : focus ? `Enter · ${signalName(focus)}` : "Enter"}
           </button>
@@ -406,7 +418,7 @@ export function VaultApp() {
             type="button"
             onClick={toggleMute}
             aria-label={muted ? "Unmute" : "Mute"}
-            className="absolute bottom-5 left-5 z-20 flex size-11 items-center justify-center border border-glow/30 bg-char/80 text-ash"
+            className="vault-icon absolute bottom-5 left-5 z-20"
           >
             {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </button>
@@ -438,7 +450,7 @@ export function VaultApp() {
                   key={choice}
                   type="button"
                   onClick={() => commit(index)}
-                  className="flex min-h-12 items-center gap-4 border border-glow/20 px-3 py-3 text-left transition-colors duration-200 hover:border-glow/70 hover:bg-bg"
+                  className="vault-choice"
                 >
                   <span className="flex size-8 shrink-0 items-center justify-center border border-glow/30 font-display text-sm text-glow">
                     {LETTERS[index]}
@@ -449,6 +461,19 @@ export function VaultApp() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {phase === "glitch" ? (
+        <section className="glitch-screen absolute inset-0 z-40 flex flex-col items-center justify-center px-6 text-center">
+          <p className="text-xs tracking-brand text-glow">ACCESS DENIED</p>
+          <h2 className="glitch-title mt-4 font-display text-4xl font-semibold text-ink sm:text-6xl">Signal rejected</h2>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-ash">
+            Three correct answers are required. The vault will not cut a portrait from this pass.
+          </p>
+          <button type="button" onClick={again} className="vault-btn mt-10">
+            Try again
+          </button>
+        </section>
       ) : null}
 
       {phase === "reveal" && vibeCopy ? (
@@ -463,7 +488,7 @@ export function VaultApp() {
           <button
             type="button"
             onClick={() => void forgeNow()}
-            className="rise mt-10 min-h-12 border border-glow/50 bg-char px-8 text-sm tracking-brand text-ink"
+            className="vault-btn rise mt-10"
             style={{ animationDelay: "320ms" }}
           >
             Forge your portrait
@@ -493,7 +518,7 @@ export function VaultApp() {
             <button
               type="button"
               onClick={download}
-              className="inline-flex min-h-12 items-center gap-2 border border-glow/50 bg-char px-5 text-sm text-ink"
+              className="vault-btn"
             >
               <Download className="size-4" />
               Download
@@ -501,18 +526,18 @@ export function VaultApp() {
             <button
               type="button"
               onClick={() => void share()}
-              className="inline-flex min-h-12 items-center gap-2 border border-glow/50 bg-char px-5 text-sm text-ink"
+              className="vault-btn"
             >
               <Share2 className="size-4" />
               Share
             </button>
           </div>
           {forgeError ? (
-            <button type="button" onClick={() => void forgeNow()} className="mt-4 text-sm text-glow">
+            <button type="button" onClick={() => void forgeNow()} className="vault-btn vault-btn-ghost mt-4">
               Try the forge again
             </button>
           ) : null}
-          <button type="button" onClick={again} className="mt-6 text-sm text-ash">
+          <button type="button" onClick={again} className="vault-btn vault-btn-ghost mt-6">
             Walk the vault again
           </button>
         </section>
