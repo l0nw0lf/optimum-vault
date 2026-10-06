@@ -60,16 +60,18 @@ const POOLS: Record<
   },
 };
 
+const BASE_APPEARANCE =
+  "a tall cream flame-shaped head of smooth rounded peaks, a deep notch on the upper left and a dripping rounded lobe on the right, a glossy black leather infinity-symbol mask, one large pinkish-brown eye visible in the right loop, no human hair, no human nose or mouth, smooth matte cream skin, a short thick neck, and a simple rounded torso, matching the reference images https://raw.githubusercontent.com/l0nw0lf/optimum-vault/main/src/game/bases/face.jpg and https://raw.githubusercontent.com/l0nw0lf/optimum-vault/main/src/game/bases/body.jpg";
+
 export function buildPortraitPrompt(vibe: VibeId, seed: number): string {
   const rand = mulberry32(seed || 1);
   const pool = POOLS[vibe];
   return [
-    "Cream flame-headed character wearing a black leather mask",
-    `outfit ${pick(rand, pool.outfit)}`,
+    `Character with ${BASE_APPEARANCE}, upper body portrait, torso and face visible, close crop, profile picture format`,
+    `wearing ${pick(rand, pool.outfit)}`,
     pick(rand, pool.accent),
-    `expression ${pick(rand, pool.expression)}`,
-    `background ${pick(rand, pool.background)}`,
-    pick(rand, pool.pose),
-    "portrait, upper body only, torso and face visible, close crop, suitable for profile picture, highly detailed, digital art style.",
+    pick(rand, pool.expression),
+    `${pick(rand, pool.background)} background`,
+    "keep the flame head, infinity mask, eye, and body structure identical to the reference",
   ].join(", ");
 }

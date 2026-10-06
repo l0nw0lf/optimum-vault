@@ -6,9 +6,9 @@ import { SIGNALS, signalName } from "@/game/layout";
 import { pickQuestions, shuffle } from "@/game/questions";
 import { scoreVibe } from "@/game/score";
 import { VIBE_COPY, type AnswerRec, type Question, type VibeId } from "@/game/types";
-import { forgePortrait } from "@/lib/pfp.functions";
+import { claimReward } from "@/lib/reward.functions";
 
-type Phase = "intro" | "opening" | "explore" | "reveal" | "forging" | "portrait" | "glitch";
+type Phase = "intro" | "opening" | "explore" | "reveal" | "forging" | "portrait" | "glitch" | "soldout";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 
@@ -25,7 +25,7 @@ export function VaultApp() {
   const readyRef = useRef(false);
   const mutedRef = useRef(false);
   const enterRef = useRef<() => void>(() => {});
-  const forge = useServerFn(forgePortrait);
+  const claim = useServerFn(claimReward);
 
   const [run, setRun] = useState(0);
   const [ready, setReady] = useState(false);
@@ -233,35 +233,40 @@ export function VaultApp() {
     }, 180);
   }
 
-  async function forgeNow() {
+  async function claimNow() {
     if (!vibe || forging) return;
     if (answersRef.current.filter((answer) => answer.correct).length < 3) {
       setPhase("glitch");
       return;
     }
     const stamp = lifeRef.current;
-    if (!seedRef.current) seedRef.current = Math.floor(Math.random() * 1_000_000_000);
     setForging(true);
     setForgeError(null);
     setPhase("forging");
     try {
-      const result = await forge({ data: { vibe, seed: seedRef.current } });
+      const result = await claim({ data: {} });
       if (lifeRef.current !== stamp) return;
       if (result.ok) {
         setPortrait(result.image);
         setForgeError(null);
+        setPhase("portrait");
+      } else if (result.soldOut) {
+        setPortrait(null);
+        setForgeError(null);
+        setPhase("soldout");
       } else {
         setPortrait(null);
         setForgeError(result.error);
+        setPhase("portrait");
       }
     } catch {
       if (lifeRef.current !== stamp) return;
       setPortrait(null);
-      setForgeError("The forge could not be reached.");
+      setForgeError("The drop could not be reached.");
+      setPhase("portrait");
     } finally {
       if (lifeRef.current !== stamp) return;
       setForging(false);
-      setPhase("portrait");
     }
   }
 
@@ -496,20 +501,33 @@ export function VaultApp() {
           </p>
           <button
             type="button"
-            onClick={() => void forgeNow()}
+            onClick={() => void claimNow()}
             className="vault-btn rise mt-10"
             style={{ animationDelay: "320ms" }}
           >
-            Forge your portrait
+            Claim your portrait
           </button>
         </section>
       ) : null}
 
       {phase === "forging" ? (
         <section className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg px-6 text-center">
-          <p className="font-display text-2xl text-ink">Cutting your portrait</p>
+          <p className="font-display text-2xl text-ink">Claiming your portrait</p>
           <div className="forge-line mt-8" />
           <p className="mt-6 max-w-sm text-sm text-ash">One of one. It will not be repeated.</p>
+        </section>
+      ) : null}
+
+      {phase === "soldout" ? (
+        <section className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#070708] px-6 text-center">
+          <p className="text-xs tracking-brand text-glow">SUPPLY</p>
+          <h2 className="mt-4 font-display text-4xl font-semibold tracking-brand text-ink sm:text-6xl">MINTED OUT</h2>
+          <p className="mt-6 max-w-md text-base leading-relaxed text-ash">
+            All 10 supply has been minted out. Stay tuned for more.
+          </p>
+          <button type="button" onClick={again} className="vault-btn mt-10">
+            Walk the vault again
+          </button>
         </section>
       ) : null}
 
@@ -538,8 +556,8 @@ export function VaultApp() {
             </div>
           ) : null}
           {forgeError && !portrait ? (
-            <button type="button" onClick={() => void forgeNow()} className="vault-btn vault-btn-ghost mt-4">
-              Try the forge again
+            <button type="button" onClick={() => void claimNow()} className="vault-btn vault-btn-ghost mt-4">
+              Try the claim again
             </button>
           ) : null}
           <button type="button" onClick={again} className="vault-btn vault-btn-ghost mt-6">
