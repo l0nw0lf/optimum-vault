@@ -1,7 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createServerFn } from "@tanstack/react-start";
-import { getSql } from "@/lib/db";
 
 export const REWARD_IDS = [
   "1000302741",
@@ -16,7 +15,17 @@ export const REWARD_IDS = [
   "1000302759",
 ] as const;
 
-const LEDGER = path.join(process.cwd(), "data", "minted.json");
+const FILES = [
+  path.join(process.cwd(), "data", "minted.json"),
+  "/tmp/optimum-vault-minted.json",
+];
+
+const memory = globalThis as typeof globalThis & { __vaultMinted?: Set<string> };
+
+function remembered(): Set<string> {
+  memory.__vaultMinted ??= new Set();
+  return memory.__vaultMinted;
+}
 
 let chain: Promise<unknown> = Promise.resolve();
 
@@ -29,67 +38,54 @@ function lock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-async function readFileClaims(): Promise<string[]> {
-  try {
-    const raw = await readFile(LEDGER, "utf8");
-    const parsed = JSON.parse(raw) as { claimed?: unknown };
-    if (!Array.isArray(parsed.claimed)) return [];
-    return parsed.claimed.filter((id): id is string => typeof id === "string");
-  } catch {
-    return [];
-  }
-}
-
-async function readDbClaims(): Promise<string[]> {
-  const sql = await getSql();
-  const rows = await sql<{ image_id: string }>`select image_id from reward_claims`;
-  return rows.map((row) => row.image_id);
-}
-
-async function writeFileClaims(ids: string[]): Promise<void> {
-  await mkdir(path.dirname(LEDGER), { recursive: true });
-  const tmp = `${LEDGER}.tmp`;
-  const unique = [...new Set(ids)].sort();
-  await writeFile(tmp, `${JSON.stringify({ claimed: unique })}\n`);
-  await rename(tmp, LEDGER);
-}
-
-async function drawOnce(): Promise<{ ok: true; image: string } | { ok: false; soldOut: true }> {
-  for (let attempt = 0; attempt < REWARD_IDS.length; attempt += 1) {
-    const claimed = new Set([...(await readFileClaims()), ...(await readDbClaims())]);
-    const available = REWARD_IDS.filter((id) => !claimed.has(id));
-    if (available.length === 0) return { ok: false, soldOut: true };
-
-    const id = available[Math.floor(Math.random() * available.length)]!;
-    const sql = await getSql();
-    const inserted = await sql<{ image_id: string }>`
-      insert into reward_claims (image_id)
-      values (${id})
-      on conflict (image_id) do nothing
-      returning image_id
-    `;
-    if (inserted.length === 0) continue;
-
-    claimed.add(id);
+async function readClaims(): Promise<Set<string>> {
+  const ids = new Set(remembered());
+  for (const file of FILES) {
     try {
-      await writeFileClaims([...claimed]);
+      const parsed = JSON.parse(await readFile(file, "utf8")) as { claimed?: unknown };
+      if (!Array.isArray(parsed.claimed)) continue;
+      for (const id of parsed.claimed) {
+        if (typeof id === "string") ids.add(id);
+      }
     } catch {
-      // The database row is the claim. A ledger write can fail on a read-only host.
+      // Missing or unreadable ledgers are an empty pool.
     }
-    return { ok: true, image: `/rewards/${id}.jpg` };
   }
-  return { ok: false, soldOut: true };
+  return ids;
+}
+
+async function writeClaims(ids: Set<string>): Promise<void> {
+  for (const id of ids) remembered().add(id);
+  const body = `${JSON.stringify({ claimed: [...ids].sort() })}\n`;
+  for (const file of FILES) {
+    try {
+      await mkdir(path.dirname(file), { recursive: true });
+      const tmp = `${file}.tmp`;
+      await writeFile(tmp, body);
+      await rename(tmp, file);
+    } catch {
+      // One ledger path is enough. /tmp covers read-only project directories.
+    }
+  }
+}
+
+async function drawOnce(): Promise<{ ok: true; id: string; image: string } | { ok: false; soldOut: true }> {
+  const claimed = await readClaims();
+  const available = REWARD_IDS.filter((id) => !claimed.has(id));
+  if (available.length === 0) return { ok: false, soldOut: true };
+  const id = available[Math.floor(Math.random() * available.length)]!;
+  claimed.add(id);
+  await writeClaims(claimed);
+  return { ok: true, id, image: `/rewards/${id}.jpg` };
 }
 
 export const claimReward = createServerFn({ method: "POST" })
-  .validator((input: unknown) => {
-    if (!input || typeof input !== "object") throw new Error("Bad request");
-    return {};
-  })
+  .validator(() => ({}))
   .handler(async () => {
     try {
       return await lock(() => drawOnce());
-    } catch {
+    } catch (error) {
+      console.error("[reward] claim failed", error);
       return { ok: false as const, soldOut: false as const, error: "The drop could not be reached." };
     }
   });

@@ -5,6 +5,7 @@ import type { EngineHandle } from "@/game/engine";
 import { SIGNALS, signalName } from "@/game/layout";
 import { pickQuestions, shuffle } from "@/game/questions";
 import { scoreVibe } from "@/game/score";
+import { rewardSrc } from "@/game/reward-images";
 import { VIBE_COPY, type AnswerRec, type Question, type VibeId } from "@/game/types";
 import { claimReward } from "@/lib/reward.functions";
 
@@ -247,7 +248,7 @@ export function VaultApp() {
       const result = await claim({ data: {} });
       if (lifeRef.current !== stamp) return;
       if (result.ok) {
-        setPortrait(result.image);
+        setPortrait(rewardSrc(result.id));
         setForgeError(null);
         setPhase("portrait");
       } else if (result.soldOut) {
@@ -274,7 +275,7 @@ export function VaultApp() {
     if (!portrait || !vibe) return;
     const link = document.createElement("a");
     link.href = portrait;
-    const ext = portrait.startsWith("data:image/jpeg") || portrait.startsWith("data:image/jpg") ? "jpg" : "png";
+    const ext = portrait.includes(".jpg") || portrait.startsWith("data:image/jpeg") ? "jpg" : "png";
     link.download = `optimum-vault-${vibe}.${ext}`;
     link.click();
   }
